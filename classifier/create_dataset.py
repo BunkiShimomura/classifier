@@ -1,4 +1,4 @@
-#Refference
+#Reference
 #https://qiita.com/sheep96/items/0c2c8216d566f58882aa
 
 import torch
@@ -55,9 +55,11 @@ class MyNormalize:
 
 #Generate testdata and traindata using Dataset
 def divide_dataset(dataset, test_size, batch_size_train, batch_size_test):
-    train_data, test_data = train_test_split(dataset, test_size=0.2)
+    learning_data, validation_data = train_test_split(dataset, test_size=0.05)
+    train_data, test_data = train_test_split(learning_data, test_size=0.2)
 
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size_train, shuffle=True)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size_test, shuffle=True)
+    validation_loader = torch.utils.data.DataLoader(validation_data, batch_size=batch_size_test, shuffle=True)
 
-    return train_loader, test_loader
+    return train_loader, test_loader, validation_loader

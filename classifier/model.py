@@ -8,6 +8,8 @@ from torch.autograd import Variable
 from sklearn.metrics import classification_report
 from PIL import Image
 import matplotlib.pyplot as plt
+from visdom import Visdom
+import numpy as np
 
 
 #Define model
@@ -18,11 +20,10 @@ class Net(nn.Module):
         self.conv1 = nn.Conv2d(1, 10, kernel_size=4) #画像が1チャンネル
         self.conv2 = nn.Conv2d(10, 20, kernel_size=4)
         self.conv2_drop = nn.Dropout2d()
-        self.fc1 = nn.Linear(20*10*14, 50)
+        self.fc1 = nn.Linear(20*10*10, 50)
         self.fc2 = nn.Linear(50, 40)
 
     def forward(self, x):
-        print("shape", x.shape)
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
         x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
         x = x.view(x.size(0), -1) #引数に-1を与えるともう一方の引数に応じた適切な数値が入力される
@@ -36,8 +37,11 @@ model = Net()
 optimizer= optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 criterion = nn.CrossEntropyLoss()
 
+
 def train(epoch, train_loader):
     model.train()
+    train_loss = 0
+    avr_loss = []
     for batch_idx, (image, label) in enumerate(train_loader):
         image, label = Variable(image), Variable(label)
         optimizer.zero_grad()
@@ -45,10 +49,19 @@ def train(epoch, train_loader):
         loss = criterion(output, label)
         loss.backward()
         optimizer.step()
+        avr_loss.append(loss.data)
+        train_loss += criterion(output, label).data
         print(loss.data)
         print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
             epoch, batch_idx * len(image), len(train_loader.dataset),
             100. * batch_idx / len(train_loader), loss.data))
+    train_loss /= len(train_loader.dataset)
+    print(avr_loss)
+    print('Loss: {:.6f}'.format(np.mean(avr_loss)))
+
+    result = train_loss
+
+    return result
 
 def test(test_loader):
     correct = 0
@@ -71,6 +84,10 @@ def test(test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
+    result = [test_loss, 100. * correct / len(test_loader.dataset)]
+
+    return result
+
 def evaluate(test_loader, mod):
     model = Net()
     #パラメータの読み込み
@@ -79,28 +96,46 @@ def evaluate(test_loader, mod):
     #モデルを評価モードにする
     model.eval()
 
+    labels = []
+    probs = []
     pred = []
     Y = []
     for i, (x,y) in enumerate(test_loader):
         with torch.no_grad():
             output = model(x)
-        '''
+            prob, label = torch.topk(output, 2)
+
+        labels.append(label.tolist())
+        probs.append(torch.exp(prob).tolist())
+
+
         pred += [int(l.argmax()) for l in output]
         Y += [int(l) for l in y]
-        print(classification_report(Y, pred))
-        '''
+        #print(output.data.max(1, keepdim=True)[1])
 
-        print(output.data.max(1, keepdim=True)[1])
-        print(len(Y))
+    print(classification_report(Y, pred)) # https://scrapbox.io/nishio/classification_reportの読み方
+    print(pred)
+    print(len(Y))
+    print(labels)
+    print(probs)
 
 #学習
-def learn(train_loader, test_loader):
-    for epoch in range(100):
-        train(epoch, train_loader)
+def learn(train_loader, test_loader, epoch):
+    train_result = []
+    train_results = []
+    for ep in range(int(epoch)):
+        train_results.append(train(ep, train_loader))
+
+    plt.plot(train_results)
+    plt.show()
+
     torch.save(model.state_dict(), 'cnn_dict.model')
     torch.save(model, 'cnn.model')
-    test(test_loader)
-    '''
-    print("evaluate")
-    evaluate(test_loader, 'cnn_dict.model')
-    '''
+
+    train_result.append(np.mean(train_results))
+    train_result.append(epoch)
+    test_result = test(test_loader)
+    test_result.append(epoch)
+
+    result = [train_result, test_result]
+    return result
