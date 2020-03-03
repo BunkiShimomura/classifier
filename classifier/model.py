@@ -126,9 +126,6 @@ def learn(train_loader, test_loader, epoch):
     for ep in range(int(epoch)):
         train_results.append(train(ep, train_loader))
 
-    plt.plot(train_results)
-    plt.show()
-
     torch.save(model.state_dict(), 'cnn_dict.model')
     torch.save(model, 'cnn.model')
 
@@ -138,4 +135,17 @@ def learn(train_loader, test_loader, epoch):
     test_result.append(epoch)
 
     result = [train_result, test_result]
+
+    print(train_result[0])
+    print(test_result[0])
+    '''
+    plt.figure()
+    plt.plot(range(epoch), train_result[0], 'r-', label='train_loss')
+    plt.plot(range(epoch), test_result[0], 'b-', label='val_loss')
+    plt.legend()
+    plt.xlabel('epoch')
+    plt.ylabel('loss')
+    plt.grid()
+    plt.show()
+    '''
     return result

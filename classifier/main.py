@@ -61,7 +61,7 @@ model = Net()
 optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.5)
 criterion = nn.CrossEntropyLoss()
 
-epoch = [1, 3, 5, 10, 50, 100]
+epoch = [1, 3, 5, 50, 100]
 train_results = []
 test_results = []
 for ep in epoch:
